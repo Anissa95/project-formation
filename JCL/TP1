@@ -1,0 +1,4 @@
+//API3A JOB (),API3,CLASS=A,MSGCLASS=H,NOTIFY=API3,                     00010001
+//             TYPRUN=SCAN                                              00020000
+//S1     EXEC  PGM=IEFBR14                                              00030000
+//*                                                                     00040000
