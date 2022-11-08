@@ -1,0 +1,99 @@
+        PRINT  NOGEN
+MAP4CI3 DFHMSD TYPE=&SYSPARM,MODE=INOUT,LANG=COBOL,EXTATT=YES,         X00000100
+               CTRL=(FREEKB,FRSET),STORAGE=AUTO,TIOAPFX=YES             00000200
+MAP4    DFHMDI COLUMN=1,LINE=1,SIZE=(24,80),MAPATTS=(COLOR,HILIGHT),   X00000210
+               DSATTS=(COLOR,HILIGHT),CURSLOC=YES
+PROG    DFHMDF POS=(1,1),                                              X00000211
+               ATTRB=ASKIP,LENGTH=17,COLOR=BLUE,                       X00000220
+               INITIAL=''                                               00000300
+        DFHMDF POS=(1,25),                                             X00000211
+               ATTRB=ASKIP,LENGTH=25,                                  X00000220
+               INITIAL='EDITION D''UN STAGIAIRE'                        00000300
+DAY     DFHMDF POS=(1,52),                                             X00000211
+               ATTRB=ASKIP,LENGTH=10,                                  X00000220
+               INITIAL=''                                               00000300
+DATE    DFHMDF POS=(1,63),                                             X00000211
+               ATTRB=ASKIP,LENGTH=10,                                  X00000220
+               INITIAL=''                                               00000300
+TIME    DFHMDF POS=(2,63),                                             X00000211
+               ATTRB=ASKIP,LENGTH=8,                                   X00000220
+               INITIAL=''                                               00000300
+        DFHMDF POS=(4,4),                                              X00000400
+               ATTRB=ASKIP,LENGTH=23,                                  X00000410
+               INITIAL='NUMERO D''UN STAGIAIRE :'                       00000420
+NUM     DFHMDF POS=(4,28),                                             X00000400
+               ATTRB=(UNPROT,NUM,IC,BRT,FSET),LENGTH=4,                X00000410
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(4,33),                                             X00000400
+               ATTRB=ASKIP,LENGTH=1                                     00000410
+        DFHMDF POS=(6,4),                                              X00000400
+               ATTRB=ASKIP,LENGTH=10,                                  X00000410
+               INITIAL='NOM      : '                                    00000420
+NOM     DFHMDF POS=(6,15),                                             X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=20,HILIGHT=UNDERLINE            00000410
+        DFHMDF POS=(6,36),                                             X00000400
+               ATTRB=ASKIP,LENGTH=10,                                  X00000410
+               INITIAL='PRENOM   :'                                     00000420
+PRENOM  DFHMDF POS=(6,47),                                             X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=20,HILIGHT=UNDERLINE            00000410
+        DFHMDF POS=(6,68),                                             X00000400
+               ATTRB=ASKIP,LENGTH=1                                     00000410
+        DFHMDF POS=(8,4),                                              X00000400
+               ATTRB=ASKIP,LENGTH=10,                                  X00000410
+               INITIAL='ADRESSE  :'                                     00000420
+ADR1    DFHMDF POS=(8,15),                                             X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=30,HILIGHT=UNDERLINE            00000410
+        DFHMDF POS=(8,46),                                             X00000400
+               ATTRB=ASKIP,LENGTH=1                                     00000410
+        DFHMDF POS=(9,4),                                              X00000400
+               ATTRB=ASKIP,LENGTH=10                                    00000410
+ADR2    DFHMDF POS=(9,15),                                             X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=30,HILIGHT=UNDERLINE            00000410
+        DFHMDF POS=(9,46),                                             X00000400
+               ATTRB=ASKIP,LENGTH=1                                     00000410
+        DFHMDF POS=(10,12),                                            X00000400
+               ATTRB=ASKIP,LENGTH=4,                                   X00000410
+               INITIAL='CP :'                                           00000420
+CP      DFHMDF POS=(10,17),                                            X00000400
+               ATTRB=(ASKIP,BRT,NUM),LENGTH=5,HILIGHT=UNDERLINE         00000410
+        DFHMDF POS=(10,23),                                            X00000400
+               ATTRB=ASKIP,LENGTH=7,                                   X00000410
+               INITIAL='VILLE :'                                        00000420
+VILLE   DFHMDF POS=(10,31),                                            X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=25,HILIGHT=UNDERLINE            00000410
+        DFHMDF POS=(10,57),                                            X00000400
+               ATTRB=ASKIP,LENGTH=1                                     00000410
+        DFHMDF POS=(12,4),                                             X00000400
+               ATTRB=ASKIP,LENGTH=25,                                  X00000410
+               INITIAL='TELEPHONE DOMICILE    :'                        00000420
+TELDOM  DFHMDF POS=(12,30),                                            X00000400
+               ATTRB=(ASKIP,BRT,NUM),LENGTH=10,HILIGHT=UNDERLINE        00000410
+        DFHMDF POS=(12,41),                                            X00000400
+               ATTRB=ASKIP,LENGTH=1                                     00000410
+        DFHMDF POS=(14,4),                                             X00000400
+               ATTRB=ASKIP,LENGTH=25,                                  X00000410
+               INITIAL='TELEPHONE MOBILE      :'                        00000420
+TELMOB  DFHMDF POS=(14,30),                                            X00000400
+               ATTRB=(ASKIP,BRT,NUM),LENGTH=10,HILIGHT=UNDERLINE        00000410
+        DFHMDF POS=(14,41),                                            X00000400
+               ATTRB=ASKIP,LENGTH=1                                     00000410
+        DFHMDF POS=(16,4),                                             X00000400
+               ATTRB=ASKIP,LENGTH=25,                                  X00000410
+               INITIAL='DATE DE NAISSANCE     :'                        00000420
+DNAISS  DFHMDF POS=(16,30),                                            X00000400
+               ATTRB=(ASKIP,BRT,NUM),LENGTH=8,HILIGHT=UNDERLINE         00000410
+        DFHMDF POS=(16,39),                                            X00000400
+               ATTRB=PROT,LENGTH=1                                      00000410
+MESS    DFHMDF POS=(22,1),                                             X00000400
+               ATTRB=ASKIP,LENGTH=79,COLOR=YELLOW                       00000410
+FIN     DFHMDF POS=(24,1),                                             X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=10,                            X00000410
+               INITIAL='PF12 - FIN'                                     00000420
+ENTR    DFHMDF POS=(24,23),                                            X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=25,                            X00000410
+               INITIAL='PF3 - RETOUR MENU'                              00000420
+VALD    DFHMDF POS=(24,49),                                            X00000400
+               ATTRB=(ASKIP,BRT),LENGTH=20,                            X00000410
+               INITIAL='ENTRER - VALIDATION '                           00000420
+        DFHMSD TYPE=FINAL                                               00000800
+        END                                                             00000900
