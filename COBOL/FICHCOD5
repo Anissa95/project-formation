@@ -1,0 +1,383 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. INF1CO3.
+       AUTHOR. AF.
+       ENVIRONMENT DIVISION.
+      *      C O N F I G U R A T I O N   S E C T I O N
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-370.
+       OBJECT-COMPUTER. IBM-370.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+      *      I N P U T - O U T P U T   S E C T I O N
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+            SELECT MVT-IN ASSIGN TO DDMVT
+                  FILE STATUS IS COMPTEUR-MVT.
+            SELECT F-ERROR  ASSIGN TO DERROR
+                  FILE STATUS IS COMPTEUR-ERR.
+            SELECT F-STAT  ASSIGN TO DSTAT
+                  FILE STATUS IS COMPTEUR-STAT.
+      ****************************************************************
+       DATA DIVISION.
+       FILE SECTION.
+       FD MVT-IN
+           BLOCK CONTAINS 0
+           RECORDING MODE F
+           DATA RECORD ENGT-MVT.
+       01 ENGT-MVT.
+         02 MATRICULE        PIC 9(6).
+         02 CODE-MVT         PIC 9.
+           88 CODE-OK        VALUE 1 THRU 4.
+         02                  PIC X(73).
+
+       FD F-ERROR
+           BLOCK CONTAINS 0
+           RECORDING MODE F
+           DATA RECORD ENGT-ERROR.
+       01 ENGT-ERROR     PIC X(80).
+       FD F-STAT
+           BLOCK CONTAINS 0
+           RECORDING MODE F
+           DATA RECORD ENGT-STAT.
+       01 ENGT-STAT           PIC X(80).
+       WORKING-STORAGE SECTION.
+      *--------------DEFINITION DES VARIABLES---------------------
+       01 EOF                PIC 9 VALUE 0.
+       01 CPT                PIC 9(2) VALUE 0.
+       01 COMPTEUR-MVT       PIC 99.
+       01 COMPTEUR-ERR       PIC 99.
+       01 COMPTEUR-STAT      PIC 99.
+
+
+       01 CODE1.
+          02                 PIC X(7).
+          02 SIGNE           PIC X(1).
+          02 TAUX            PIC 99.
+          02                 PIC X(70).
+
+       01 CODE2.
+          02                 PIC X(7).
+          02 NOM-PRENOM      PIC X(20).
+          02                 PIC X(53).
+
+       01 CODE3.
+          02                 PIC X(7).
+          02 ADRESSE         PIC X(18).
+          02 CODE-POSTAL     PIC 9(5).
+          02 VILLE           PIC X(12).
+          02                 PIC X(38).
+
+       01 CODE4.
+          02                PIC X(7).
+          02 TYPE-P         PIC X(1).
+          02 PRIME           PIC 9(4)V99.
+          02                PIC X(66).
+       01 CODE5.
+          02 MATRI         PIC 9(6).
+          02                PIC 9(1).
+          02 NOM            PIC X(12).
+          02 PRENOM         PIC X(10).
+          02 TEL-FIXE.
+             04 INDIC-F     PIC 99.
+                88 INDIC-F-OK  VALUE 01 THRU 07.
+             04               PIC 9(8).
+          02 TEL-PORT.
+             04 INDIC-P     PIC 99.
+                88 INDIC-P-OK  VALUE 06 THRU 07.
+             04               PIC 9(8).
+          02 SALAIRE              PIC S9(5)V99 COMP-3.
+          02 QUALIFICATION        PIC X(19).
+          02 DATE-EMBAU.
+             05 JOUR              PIC 9(2).
+               88 JOUR-OK         VALUE 01 THRU 31.
+             05 MOIS              PIC 9(2).
+               88 MOIS-OK         VALUE 01 THRU 12.
+             05 ANNEE             PIC 9(4).
+
+       01 DATE-8.
+          02 DD             PIC 9(4).
+          02 MM             PIC 9(2).
+          02 JJ             PIC 9(2).
+
+       01 TIME-8.
+          02 HH             PIC 9(2).
+          02 MM             PIC 9(2).
+          02 SS             PIC 9(2).
+
+       01 LIGNE-T.
+          02                PIC X(50) VALUE SPACE.
+          02 HH             PIC 9(2).
+          02                PIC X(1)  VALUE ":".
+          02 MM             PIC 9(2).
+          02                PIC X(1)  VALUE ":".
+          02 SS             PIC 9(2).
+
+       01 LIGNE1.
+          02                PIC X(45) VALUE "API3".
+          02                PIC X(3) VALUE "LE".
+          02 JJ             PIC 9(2).
+          02                PIC X(1) VALUE "/".
+          02 MM             PIC 9(2).
+          02                PIC X(1) VALUE "/".
+          02 DD             PIC 9(4).
+
+       01 LIGNE2.
+          02                PIC X(20) VALUE SPACE.
+          02                PIC X(20) VALUE "LISTES DES ERREURS".
+
+       01 LIGNE3.
+          02                PIC X(13) VALUE " MATRICULE".
+          02                PIC X(15) VALUE " TYPE".
+          02                PIC X(20) VALUE "MESSAGE D'ERREUR".
+
+       01 LIGNE4.
+          02                PIC X(15) VALUE "---------".
+          02                PIC X(13) VALUE  "----".
+          02                PIC X(40) VALUE "-------------------------".
+       01 LISTE.
+          02 MAT-L          PIC X(15).
+          02 TYPE-L         PIC X(11).
+          02 CPT-L          PIC X(2).
+          02                PIC X(2) VALUE "-".
+          02 MSG            PIC X(40).
+
+       01 TABLE-X.
+          02 POSTE   PIC X OCCURS 6.
+       01 I          PIC 9.
+       01 TYPE-PRI   PIC 9 VALUE 0.
+
+       01 LINE-CODE5.
+          02 MAT-CODE5           PIC 9(6).
+          02                     PIC X(10).
+          02 NOM-CODE5           PIC A(12).
+          02                     PIC X(10).
+          02 PRENOM-CODE5        PIC X(10).
+          02                     PIC X(10).
+          02 SALAIRE-CODE5       PIC ZZ.Z99,99.
+          02                     PIC X(10).
+          02 DATE-EM-CODE5       PIC 9(8).
+      *  COMPTEUR POUR LES STATS----------------
+       01 ALL-CPT        PIC 99 VALUE 0.
+       01 ERR-CPT        PIC 99 VALUE 0.
+       01 TP1-CPT        PIC 99 VALUE 0.
+       01 TP2-CPT        PIC 99 VALUE 0.
+       01 TP3-CPT        PIC 99 VALUE 0.
+       01 TP4-CPT        PIC 99 VALUE 0.
+       01 TP5-CPT        PIC 99 VALUE 0.
+       01 MAT-CPT        PIC 99 VALUE 0.
+       01 COD-CPT        PIC 99 VALUE 0.
+      * LIGNE DE STAT---------------------------------
+       01 LINE-ALLFMVT.
+          02  PIC X(40) VALUE "NOMBRE D'ENREGISTREMENTS LU SUR FMVT".
+          02 CPT-ALL       PIC 99.
+       01 LINE-ERROR.
+          02  PIC X(40) VALUE "NOMBRE D'ENREGISTREMENTS EN ERREUR ".
+          02 CPT-ERR       PIC 99.
+       01 LINE-ERRTYPE1.
+          02  PIC X(40) VALUE "NOMBRE D'ERREUR DE TYPE 1 :".
+          02 CPT-TYPE1     PIC 99.
+       01 LINE-ERRTYPE2.
+          02  PIC X(40) VALUE "NOMBRE D'ERREUR DE TYPE 2 :".
+          02 CPT-TYPE2     PIC 99.
+       01 LINE-ERRTYPE3.
+          02  PIC X(40) VALUE "NOMBRE D'ERREUR DE TYPE 3 :".
+          02 CPT-TYPE3     PIC 99.
+       01 LINE-ERRTYPE4.
+          02  PIC X(40) VALUE "NOMBRE D'ERREUR DE TYPE 4 :".
+          02 CPT-TYPE4     PIC 99.
+       01 LINE-ERRTYPE5.
+          02  PIC X(40) VALUE "NOMBRE D'ERREUR DE TYPE 5 :".
+          02 CPT-TYPE5     PIC 99.
+       01 LINE-ERRMAT.
+          02  PIC X(40) VALUE "NOMBRE D'ERREUR MAT INVALIDE :".
+          02 CPT-MAT     PIC 99.
+       01 LINE-ERRCODE.
+          02  PIC X(40) VALUE "NOMBRE D'ERREUR CODE INVALIDE :".
+          02 CPT-CODE     PIC 99.
+       PROCEDURE DIVISION.
+      *-----------* ICI PARAGRAPHE NON UTILE, SIMPLE DECOR-INFO
+           PERFORM INIT-ENRT
+           PERFORM TRAITEMENT UNTIL EOF = 1
+           PERFORM FIN
+           STOP RUN.
+       INIT-ENRT.
+      *  ACCEPT TABLE-X
+           OPEN INPUT MVT-IN
+                OUTPUT  F-ERROR
+                OUTPUT  F-STAT
+           ACCEPT DATE-8 FROM DATE YYYYMMDD
+           ACCEPT TIME-8 FROM TIME
+           MOVE CORR DATE-8 TO LIGNE1
+           MOVE CORR TIME-8 TO LIGNE-T
+           WRITE ENGT-ERROR FROM LIGNE1
+           WRITE ENGT-ERROR FROM LIGNE-T
+           WRITE ENGT-ERROR FROM LIGNE2
+           WRITE ENGT-ERROR FROM LIGNE3
+           WRITE ENGT-ERROR FROM LIGNE4
+           READ MVT-IN AT END
+                                    MOVE 1 TO EOF
+                                    DISPLAY 'FIN'
+           END-READ.
+
+       TRAITEMENT.
+           ADD 1 TO CPT
+           MOVE CPT TO CPT-L
+           MOVE CPT TO CPT-ALL
+           MOVE ERR-CPT TO CPT-ERR
+           MOVE MATRICULE TO MAT-L
+           MOVE CODE-MVT TO TYPE-L
+
+           EVALUATE MATRICULE IS NUMERIC ALSO CODE-MVT IS NUMERIC
+               WHEN TRUE ALSO TRUE
+            EVALUATE CODE-MVT
+              WHEN 1 PERFORM TRAIT1
+              WHEN 2 PERFORM TRAIT2
+              WHEN 3 PERFORM TRAIT3
+              WHEN 4 PERFORM TRAIT4
+              WHEN 5 PERFORM TRAIT5
+
+            END-EVALUATE
+               WHEN FALSE ALSO ANY
+                   MOVE ' MATRICULE NON NUMERIQUE' TO MSG
+                   ADD 1 TO MAT-CPT
+                   ADD 1 TO ERR-CPT
+                   ADD 1 TO TP1-CPT
+                   MOVE MAT-CPT TO CPT-MAT
+             WRITE ENGT-ERROR FROM LISTE
+               WHEN TRUE ALSO FALSE
+                  MOVE ' CODE MOUVEMENT INVALIDE ' TO MSG
+                   ADD 1 TO COD-CPT
+                   ADD 1 TO ERR-CPT
+                   ADD 1 TO TP1-CPT
+                   MOVE COD-CPT TO CPT-CODE
+             WRITE ENGT-ERROR FROM LISTE
+           END-EVALUATE
+      *    PERFORM LECTURE-SYSOUT
+           READ MVT-IN AT END
+                                    MOVE 1 TO EOF
+                                    DISPLAY 'FIN'
+           END-READ.
+        TRAIT1.
+            MOVE TP1-CPT TO CPT-TYPE1
+            MOVE ENGT-MVT TO CODE1
+           EVALUATE TRUE
+            WHEN SIGNE  = '+'
+            WHEN SIGNE = '-'
+             EVALUATE FALSE
+             WHEN TAUX IS NUMERIC
+             ADD 1 TO TP1-CPT
+                   ADD 1 TO ERR-CPT
+                MOVE " TAUX NON NUMERIQUE" TO MSG
+             WRITE ENGT-ERROR FROM LISTE
+             END-EVALUATE
+             WHEN OTHER
+             ADD 1 TO TP1-CPT
+                   ADD 1 TO ERR-CPT
+              MOVE ' SIGNE DIFFERENT DE + OU - ' TO MSG
+             WRITE ENGT-ERROR FROM LISTE
+             END-EVALUATE.
+
+        TRAIT2.
+            MOVE ENGT-MVT TO CODE2
+             EVALUATE  NOM-PRENOM = SPACE
+                   WHEN  FALSE
+                 MOVE " LE NOM N'EST PAS RENSEIGNE " TO MSG
+                   ADD 1 TO TP2-CPT
+                   ADD 1 TO ERR-CPT
+                   MOVE TP2-CPT TO CPT-TYPE2
+             WRITE ENGT-ERROR FROM LISTE
+              END-EVALUATE.
+
+        TRAIT3.
+                   MOVE TP3-CPT TO CPT-TYPE3
+             MOVE ENGT-MVT TO CODE3
+              IF  ADRESSE = SPACE AND CODE-POSTAL = SPACE
+                       AND VILLE = SPACE
+
+                  ADD 1 TO TP3-CPT
+                   ADD 1 TO ERR-CPT
+                 MOVE " AU MOINS UNE ZONE DOIT ETRE SAISIE" TO MSG
+             WRITE ENGT-ERROR FROM LISTE
+              ELSE
+                 IF CODE-POSTAL NOT NUMERIC AND CODE-POSTAL NOT = SPACE
+                  ADD 1 TO TP3-CPT
+                   ADD 1 TO ERR-CPT
+                       MOVE  " CODE POSTAL INVALIDE" TO MSG
+             WRITE ENGT-ERROR FROM LISTE
+              END-IF
+              END-IF.
+        TRAIT4.
+                   MOVE TP4-CPT TO CPT-TYPE4
+             MOVE ENGT-MVT TO CODE4
+             IF  TYPE-P < 0 OR TYPE-P > 9
+              ADD 1 TO TP4-CPT
+                   ADD 1 TO ERR-CPT
+               MOVE " TYPE DE PRIME NON VALIDE" TO MSG
+             WRITE ENGT-ERROR FROM LISTE
+              ELSE
+                 IF PRIME NOT NUMERIC
+              ADD 1 TO TP4-CPT
+                   ADD 1 TO ERR-CPT
+              MOVE " PRIME NON NUMERIQUE" TO MSG
+             WRITE ENGT-ERROR FROM LISTE
+             END-IF
+             END-IF.
+
+        TRAIT5.
+            MOVE TP5-CPT TO CPT-TYPE5
+            MOVE ENGT-MVT TO CODE5
+           IF  NOT INDIC-F-OK
+               MOVE "TEL FIXE NON VALIDE" TO MSG
+                   ADD 1 TO ERR-CPT
+               ADD 1 TO TP5-CPT
+                WRITE ENGT-ERROR FROM LISTE
+              ELSE
+              IF NOT INDIC-P-OK
+               ADD 1 TO TP5-CPT
+               MOVE "TEL PORT NON VALIDE" TO MSG
+                   ADD 1 TO ERR-CPT
+                WRITE ENGT-ERROR FROM LISTE
+                ELSE
+                IF NOT JOUR-OK
+              MOVE "JOUR D'EMBAUCHE INVALIDE" TO MSG
+                   ADD 1 TO ERR-CPT
+               ADD 1 TO TP5-CPT
+              WRITE ENGT-ERROR FROM LISTE
+                ELSE
+                IF NOT MOIS-OK
+                  MOVE "MOIS D'EMBAUCHE INVALIDE" TO MSG
+                   ADD 1 TO ERR-CPT
+               ADD 1 TO TP5-CPT
+                  WRITE ENGT-ERROR FROM LISTE
+                  END-IF
+                END-IF
+              END-IF
+           END-IF
+           IF SALAIRE IS NOT NUMERIC
+
+            MOVE " SALAIRE EST NON  NUMERIQUE " TO MSG
+                   ADD 1 TO ERR-CPT
+               ADD 1 TO TP5-CPT
+            WRITE ENGT-ERROR FROM LISTE
+            ELSE
+            PERFORM LECTURE-SYSOUT
+            END-IF.
+        LECTURE-SYSOUT.
+            MOVE MATRI TO MAT-CODE5
+            MOVE NOM TO NOM-CODE5
+            MOVE PRENOM TO PRENOM-CODE5
+            MOVE SALAIRE TO SALAIRE-CODE5
+            MOVE DATE-EMBAU TO DATE-EM-CODE5
+            DISPLAY LINE-CODE5.
+        FIN.
+               WRITE ENGT-STAT FROM LINE-ERRMAT
+               WRITE ENGT-STAT FROM LINE-ERRCODE
+               WRITE ENGT-STAT FROM LINE-ERRTYPE1
+               WRITE ENGT-STAT FROM LINE-ERRTYPE2
+               WRITE ENGT-STAT FROM LINE-ERRTYPE3
+               WRITE ENGT-STAT FROM LINE-ERRTYPE4
+               WRITE ENGT-STAT FROM LINE-ERRTYPE5
+               WRITE ENGT-STAT FROM LINE-ALLFMVT
+               WRITE ENGT-STAT FROM LINE-ERROR
+           CLOSE MVT-IN F-ERROR F-STAT .
+      *================= FIN PROG COB1 ================================*
