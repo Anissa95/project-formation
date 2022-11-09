@@ -1,0 +1,247 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. VSAM1.
+       AUTHOR. AF.
+       ENVIRONMENT DIVISION.
+      *      C O N F I G U R A T I O N   S E C T I O N
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-370.
+       OBJECT-COMPUTER. IBM-370.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+      *      I N P U T - O U T P U T   S E C T I O N
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+            SELECT ASSURE3 ASSIGN TO ASSURE3
+              ORGANIZATION INDEXED
+              RECORD KEY MAT-X3
+              ACCESS MODE SEQUENTIAL
+              FILE STATUS CR1.
+            SELECT FMVTSE ASSIGN TO AS-FMVTSE
+              FILE STATUS IS CR2.
+            SELECT ASSURE4 ASSIGN TO ASSURE4
+              ORGANIZATION INDEXED
+              RECORD KEY MAT-X4
+              ACCESS MODE SEQUENTIAL
+              FILE STATUS CR3.
+            SELECT ANO ASSIGN TO ANO
+              FILE STATUS IS CR4.
+      ****************************************************************
+       DATA DIVISION.
+       FILE SECTION.
+       FD ASSURE3
+           DATA RECORD ENGT-ASSURE3.
+       01 ENGT-ASSURE3.
+          COPY CASSURE3 SUPPRESS.
+       FD FMVTSE
+          DATA RECORD ENGT-MVT.
+       01 ENGT-MVT.
+          COPY CFMVTSE SUPPRESS.
+       FD ASSURE4
+          DATA RECORD ENGT-ASSURE4.
+       01 ENGT-ASSURE4.
+          COPY CASSURE4 SUPPRESS.
+       FD ANO
+           BLOCK CONTAINS 0
+           RECORDING MODE F
+           DATA RECORD ENGT-ANO.
+       01 ENGT-ANO     PIC X(80).
+       WORKING-STORAGE SECTION.
+      *--------------DEFINITION DES VARIABLES---------------------
+      * COMPTEUR DES FILES STATUS
+       01 CR1           PIC 9(2).
+       01 CR2           PIC 9(2).
+       01 CR3           PIC 9(2).
+       01 CR4           PIC 9(2).
+       01 EOF           PIC 9 VALUE 0.
+      * COMPTEUR POUR LES STAT
+       01 CPT-MAJ        PIC 99 VALUE 0.
+       01 CPT-SUPP       PIC 99 VALUE 0.
+       01 CPT-CREAT      PIC 99 VALUE 0.
+       01 CPT-CMVT       PIC 99 VALUE 0.
+       01 CPT-ANO        PIC 99 VALUE 0.
+       01 CPT-ASSU3      PIC 99 VALUE 0.
+       01 CPT-MVT        PIC 99 VALUE 0.
+       01 CPT-ASSUR4     PIC 99 VALUE 0.
+       01 CPT-SUPPANO    PIC 99 VALUE 0.
+       01 CPT-CREAGT     PIC 99 VALUE 0.
+       01 CPT-MODIF      PIC 99 VALUE 0.
+
+       01 LINE-ANO.
+          02 MATRI            PIC X(6).
+          02                  PIC X(5).
+          02 MSG              PIC X(45).
+       PROCEDURE DIVISION.
+      *-----------* ICI PARAGRAPHE NON UTILE, SIMPLE DECOR-INFO
+           PERFORM INIT-ENRT
+           PERFORM TRAITEMENT UNTIL CR1 = 10
+                                 OR CR2 = 10
+           PERFORM TRAITFF
+           PERFORM FICHIERSTAT
+           PERFORM FIN
+           STOP RUN.
+       INIT-ENRT.
+           OPEN INPUT ASSURE3
+           OPEN INPUT FMVTSE
+           OPEN OUTPUT ASSURE4
+           OPEN OUTPUT ANO
+           READ ASSURE3
+           READ FMVTSE.
+
+       TRAITEMENT.
+            EVALUATE TRUE
+                 WHEN  MAT-X3 = MAT-MVT
+                       PERFORM P-EGALITE
+                       ADD 1 TO CPT-ASSU3
+                       ADD 1 TO CPT-MVT
+                WHEN MAT-X3 > MAT-MVT
+                       PERFORM P-SUPERIEUR
+                       ADD 1 TO CPT-MVT
+                WHEN MAT-X3 < MAT-MVT
+                       PERFORM P-INFERIEUR
+                       ADD 1 TO CPT-ASSU3
+           END-EVALUATE.
+       P-EGALITE.
+            EVALUATE CODE-MVT
+             WHEN 'C'
+                 MOVE MAT-X3 TO MATRI
+                 MOVE "CREATION SUR ENREGISTREMENT EXISTANT "    TO MSG
+                 ADD 1 TO CPT-ANO
+                 ADD 1 TO CPT-CREAT
+                 ADD 1 TO CPT-ASSUR4
+                 WRITE ENGT-ANO FROM LINE-ANO
+                 WRITE ENGT-ASSURE4 FROM ENGT-MVT
+             WHEN 'M'
+                 WRITE ENGT-ASSURE4 FROM ENGT-MVT
+                 ADD 1 TO CPT-ASSUR4
+                 ADD 1 TO CPT-MODIF
+             WHEN 'S'
+                 ADD 1 TO CPT-SUPP
+                 CONTINUE
+             WHEN OTHER
+                 MOVE MAT-MVT TO MATRI
+                 MOVE "CODE MOUVEMENT INVALIDE"               TO MSG
+                 WRITE ENGT-ANO FROM LINE-ANO
+                 WRITE ENGT-ASSURE4 FROM ENGT-ASSURE3
+                 ADD 1 TO CPT-ASSUR4
+                 ADD 1 TO CPT-ANO
+                 ADD 1 TO CPT-CMVT
+           END-EVALUATE
+           READ ASSURE3
+           READ FMVTSE.
+
+       P-SUPERIEUR.
+           EVALUATE CODE-MVT
+            WHEN 'C'
+                 WRITE ENGT-ASSURE4 FROM ENGT-MVT
+                 ADD 1 TO CPT-CREAGT
+                 ADD 1 TO CPT-ASSUR4
+            WHEN 'M'
+                 MOVE MAT-MVT TO MATRI
+                 MOVE "MISE A JOUR SUR ENREGISTREMENT INEXISTANT" TO MSG
+                 WRITE ENGT-ANO FROM LINE-ANO
+                 ADD 1 TO CPT-ANO
+                 ADD 1 TO CPT-MAJ
+            WHEN 'S'
+                 MOVE MAT-MVT TO MATRI
+                 MOVE "SUPPRESSION SUR ENREGISTREMENT INEXISTANT" TO MSG
+                 WRITE ENGT-ANO FROM LINE-ANO
+                 ADD 1 TO CPT-ANO
+                 ADD 1 TO CPT-SUPPANO
+            WHEN OTHER
+                 MOVE MAT-MVT TO MATRI
+                 MOVE "CODE MOUVEMENT INVALIDE" TO MSG
+                 ADD 1 TO CPT-ANO
+                 ADD 1 TO CPT-CMVT
+                 WRITE ENGT-ANO FROM LINE-ANO
+           END-EVALUATE
+
+           READ FMVTSE.
+
+       P-INFERIEUR.
+           EVALUATE CODE-MVT
+              WHEN 'C'
+                 WRITE ENGT-ASSURE4 FROM ENGT-MVT
+                 ADD 1 TO CPT-CREAGT
+                 ADD 1 TO CPT-ASSUR4
+              WHEN 'M'
+                 MOVE MAT-MVT TO MATRI
+                 MOVE "MISE A JOUR SUR ENREGISTREMENT INEXISTANT" TO MSG
+                 ADD 1 TO CPT-ANO
+                 ADD 1 TO CPT-MAJ
+                 WRITE ENGT-ANO FROM LINE-ANO
+              WHEN 'S'
+                 MOVE MAT-MVT TO MATRI
+                 MOVE "SUPPRESSION SUR ENREGISTREMENT INEXISTANT" TO MSG
+                 ADD 1 TO CPT-ANO
+                 ADD 1 TO CPT-SUPPANO
+                 WRITE ENGT-ANO FROM LINE-ANO
+              WHEN OTHER
+                  MOVE MAT-MVT TO MATRI
+                  MOVE "CODE MOUVEMENT INVALIDE" TO MSG
+                  ADD 1 TO CPT-ANO
+                  ADD 1 TO CPT-CMVT
+                  WRITE ENGT-ANO FROM LINE-ANO
+           END-EVALUATE
+           READ ASSURE3.
+
+       TRAITFF.
+           IF CR1 = 10
+             PERFORM UNTIL CR2 = 10
+             EVALUATE CODE-MVT
+               WHEN 'C'
+                  WRITE ENGT-ASSURE4 FROM ENGT-MVT
+                  ADD 1 TO CPT-CREAGT
+                  ADD 1 TO CPT-ASSUR4
+               WHEN 'M'
+                  MOVE MAT-MVT TO MATRI
+                 MOVE "MISE A JOUR SUR ENREGISTREMENT INEXISTANT" TO MSG
+                  WRITE ENGT-ANO FROM LINE-ANO
+                  ADD 1 TO CPT-MAJ
+                  ADD 1 TO CPT-ANO
+             WHEN 'S'
+                  MOVE MAT-MVT TO MATRI
+                 MOVE "SUPPRESSION SUR ENREGISTREMENT INEXISTANT" TO MSG
+                  WRITE ENGT-ANO FROM LINE-ANO
+                  ADD 1 TO CPT-ANO
+                  ADD 1 TO CPT-SUPPANO
+             WHEN OTHER
+                  MOVE MAT-MVT TO MATRI
+                  MOVE "CODE MOUVEMENT INVALIDE" TO MSG
+                  WRITE ENGT-ANO FROM LINE-ANO
+                  ADD 1 TO CPT-ANO
+                  ADD 1 TO CPT-CMVT
+             END-EVALUATE
+             READ FMVTSE
+                   ADD 1 TO CPT-MVT
+            END-PERFORM
+            END-IF
+
+            IF CR2 = 10
+              PERFORM UNTIL CR1 = 10
+                  WRITE ENGT-ASSURE4 FROM ENGT-ASSURE3
+                  ADD 1 TO CPT-ASSUR4
+            READ ASSURE3
+                  ADD 1 TO CPT-ASSU3
+           END-PERFORM
+           END-IF.
+       FICHIERSTAT.
+           DISPLAY "NOMBRE D'ENREGISTREMENTS ASSURES LU    : " CPT-ASSU3
+           DISPLAY "NOMBRE D'ENREGISTREMENTS MOUVEMENTS LUS: " CPT-MVT
+           DISPLAY "NOMBRE D'ENREGISTREMENTS EN CREATION   : "
+                    CPT-CREAGT
+           DISPLAY "NOMBRE D'ENREGISTREMENTS CREES ASSURES4: "
+                    CPT-ASSUR4
+           DISPLAY "NOMBRE D'ENREGISTREMENTS MODIFIES      : "
+                    CPT-MODIF
+           DISPLAY "NOMBRE D'ENREGISTREMENTS SUPPRIMES     : " CPT-SUPP
+           DISPLAY "NOMBRE D'ENREGISTREMENTS EN ANOMALIE   : " CPT-ANO
+           DISPLAY "  ANOMALIE DE CODE MOUVEMENT           : " CPT-CMVT
+           DISPLAY "  ANOMALIE DE CREATION                 : " CPT-CREAT
+           DISPLAY "  ANOMALIE DE MISE A JOUR              : " CPT-MAJ
+           DISPLAY "  ANOMALIE DE SUPPRESSION              : "
+                     CPT-SUPPANO.
+       FIN.
+           CLOSE ASSURE3
+           CLOSE FMVTSE
+           CLOSE ASSURE4
+           CLOSE ANO.
