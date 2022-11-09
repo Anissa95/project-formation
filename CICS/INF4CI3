@@ -1,0 +1,282 @@
+      *======================================================*
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. INF4C3.
+       AUTHOR. AF.
+      *======================================================*
+      *   E N V I R O N M E N T       D I V I S I O N        *
+      *======================================================*
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-390.
+       OBJECT-COMPUTER. IBM-390.
+
+      *======================================================*
+      *           D A T A         D I V I S I O N            *
+      *======================================================*
+       DATA DIVISION.
+
+       WORKING-STORAGE SECTION.
+
+      *------------------------------------------------------*
+      *   DESCRIPTION DETAILLEE DE LA ZONE DE COMMUNICATION  *
+      *------------------------------------------------------*
+       01  WS-COMMAREA.
+           05 PROG-PRECEDENT      PIC X(8).
+           05 PROG-COURANT        PIC X(8).
+           05 PROG-SUIVANT        PIC X(8).
+           05 F                   PIC X(176).
+
+       01 C-R                     PIC S9(8) COMP.
+
+       01 TS-TIME                 PIC S9(15) COMP-3.
+       01 TS-DAY                  PIC S9(8) COMP.
+
+       01 MON-PROG                PIC X(8) VALUE 'INF4CI3'.
+       01 MA-MAP                  PIC X(8) VALUE 'MAP4CI3'.
+       01 MA-TRX                  PIC X(4) VALUE 'T4C3'.
+
+      *
+       01 TEL-FIXE.
+             04 INDIC-F     PIC 99.
+                88 INDIC-F-OK  VALUE 01 THRU 05.
+             04               PIC 9(8).
+       01 TEL-PORT.
+          04 INDIC-P     PIC 99.
+             88 INDIC-P-OK  VALUE 06.
+          04               PIC 9(8).
+       01 DATE-NAISS.
+          05 JOUR              PIC 9(2).
+            88 JOUR-OK         VALUE 01 THRU 31.
+             05 MOIS              PIC 9(2).
+               88 MOIS-OK         VALUE 01 THRU 12.
+             05 ANNEE             PIC 9(4).
+               88 ANNEE-OK        VALUE 1950 THRU 2006.
+      *------------------------------------------------------*
+      *   DESCRIPTION   DE   LA   MAP                        *
+      *------------------------------------------------------*
+       COPY MAP4CI3.
+
+      *------------------------------------------------------*
+      *   ZONE DE MESSAGE TAMPON POUR LE SEND FROM           *
+      *------------------------------------------------------*
+       01  MESSAGE-TXT            PIC X(79).
+
+      *------------------------------------------------------*
+      *   DESCRIPTION   DES  TOUCHES   FONCTIONS             *
+      *------------------------------------------------------*
+       COPY DFHAID.
+
+      *------------------------------------------------------*
+      *   DESCRIPTION   DES  ATTRIBUTS                       *
+      *------------------------------------------------------*
+       COPY DFHBMSCA.
+      *------------------------------------------------------*
+      *   COPIE DES ATTRIBUTS DE FSTAG POUR LE WRITE        *
+      *------------------------------------------------------*
+
+        COPY FSTAG.
+      *======================================================*
+      *          L I N K A G E     S E C T I O N             *
+      *======================================================*
+
+       LINKAGE SECTION.
+       01  DFHCOMMAREA.
+           05 LK-COMMAREA            PIC X(200).
+
+      *======================================================*
+      *     P R O C E D U R E     D I V I S I O N            *
+      *======================================================*
+
+       PROCEDURE DIVISION.
+       00000-INIT-PROGRAMME.
+      *---------------------*
+            PERFORM  10000-DEBUT-PROGRAMME
+            PERFORM  20000-TRAIT-PROGRAMME
+            GOBACK.
+
+
+       10000-DEBUT-PROGRAMME.
+      *---------------------*
+      *   TEST DE PREMIERE ENTREE DANS LE PROGRAMME
+      *   SI NON PROGRAMME  MENU ===>  ARRET  (ACCES INTERDIT)
+           IF EIBCALEN = 0
+              INITIALIZE      WS-COMMAREA
+           ELSE
+              MOVE LK-COMMAREA  TO WS-COMMAREA
+           END-IF
+
+           MOVE  PROG-COURANT     TO  PROG-PRECEDENT
+           MOVE  'INF4CI3'        TO  PROG-COURANT
+           .
+
+       20000-TRAIT-PROGRAMME.
+      *---------------------*
+
+           IF PROG-PRECEDENT  NOT =  PROG-COURANT
+              PERFORM  21000-TRAIT-CHARGEMENT
+              PERFORM  22000-TRAIT-ENVOI
+           ELSE
+              PERFORM  23000-TRAIT-RECEPTION
+           END-IF
+           .
+      *********************************************************
+
+       21000-TRAIT-CHARGEMENT.
+      *----------------------*
+      *  CHARGEMENT DE LA MAP AVANT AFFICHAGE
+           MOVE LOW-VALUE TO MAP4O
+
+      *  SI TRAITEMENT PARTICULIER AVANT AFFICHAGE
+           .
+       21100-TRAIT-SPECIFIQUE.
+      *----------------------*
+            STRING EIBTRNID '/'
+            EIBTRMID '/MAP4CI3'
+            DELIMITED BY SIZE
+            INTO PROGO
+
+
+           EXEC CICS ASKTIME
+                ABSTIME(TS-TIME)
+           END-EXEC
+           EXEC CICS FORMATTIME
+                ABSTIME(TS-TIME)
+                DDMMYYYY(DATEO)
+                DATESEP('/')
+                TIME(TIMEO)
+                TIMESEP(':')
+                DAYOFWEEK(TS-DAY)
+           END-EXEC
+           EVALUATE TS-DAY
+           WHEN 0 MOVE 'DIMANCHE' TO DAYO
+           WHEN 1 MOVE 'LUNDI' TO DAYO
+           WHEN 2 MOVE 'MARDI' TO DAYO
+           WHEN 3 MOVE 'MERCREDI' TO DAYO
+           WHEN 4 MOVE 'JEUDI' TO DAYO
+           WHEN 5 MOVE 'VENDREDI' TO DAYO
+           WHEN 6 MOVE 'SAMEDI' TO DAYO
+           END-EVALUATE
+      *
+                .
+
+       22000-TRAIT-ENVOI.
+      *-----------------*
+           PERFORM  21100-TRAIT-SPECIFIQUE
+           EXEC CICS SEND MAP    ('MAP4')
+                          MAPSET('MAP4CI3')
+                          ERASE
+           END-EXEC
+
+           MOVE PROG-COURANT TO PROG-SUIVANT
+
+           EXEC CICS RETURN TRANSID  ('T4C3')
+                            COMMAREA (WS-COMMAREA)
+                            LENGTH   (LENGTH OF WS-COMMAREA)
+           END-EXEC
+           .
+
+       23000-TRAIT-RECEPTION.
+      *---------------------*
+
+           EVALUATE EIBAID
+              WHEN DFHENTER
+                   PERFORM  23100-TRAIT-ENTER
+              WHEN DFHCLEAR
+              WHEN DFHPF12
+                   PERFORM  23200-TRAIT-FIN
+              WHEN DFHPF3
+                   MOVE 'INF0CI3' TO PROG-SUIVANT
+                   PERFORM  23110-PROG-SUIVANT
+              WHEN OTHER
+                   PERFORM  90000-ERR-TOUCHE
+           END-EVALUATE
+           .
+
+       23100-TRAIT-ENTER.
+      *------------------*
+      *    ..........................
+           EXEC CICS RECEIVE MAP  ('MAP4')
+                             MAPSET('MAP4CI3')
+                             RESP (C-R)
+           END-EXEC
+
+           EVALUATE C-R
+              WHEN DFHRESP(NORMAL)
+                   PERFORM 23300-TRAIT-READ
+              WHEN OTHER
+                   PERFORM 91000-ERREUR-CICS
+           END-EVALUATE.
+
+        23300-TRAIT-READ.
+      *EXUCUTION
+           MOVE NUMI TO E-NUMERO
+           EXEC CICS READ
+              FILE('FSTAG03')
+              RIDFLD (E-NUMERO)
+              INTO (E-STAGIAIRE)
+              LENGTH(LENGTH OF E-STAGIAIRE)
+              RESP(C-R)
+           END-EXEC
+           EVALUATE C-R
+              WHEN DFHRESP(NORMAL)
+                   MOVE "NUMERO DE STAGIAIRE TROUVE" TO MESSO
+                   PERFORM 42000-VARIABLES-SORTIE
+                   PERFORM 22000-TRAIT-ENVOI
+              WHEN DFHRESP(NOTFND)
+                  MOVE "NUMERO STAGIAIRE INEXISTANT" TO MESSO
+                   PERFORM 22000-TRAIT-ENVOI
+              WHEN OTHER
+                   PERFORM 91000-ERREUR-CICS
+            END-EVALUATE.
+
+      *
+       23110-PROG-SUIVANT.
+      *------------------*
+
+           EXEC CICS XCTL  PROGRAM  (PROG-SUIVANT)
+                           COMMAREA (WS-COMMAREA)
+                           LENGTH   (LENGTH OF WS-COMMAREA)
+                           RESP(C-R)
+           END-EXEC
+           IF C-R = DFHRESP(PGMIDERR)
+            MOVE 'PROGRAMME EN COURS DE DEVELOPPEMENT' TO MESSO
+            PERFORM 22000-TRAIT-ENVOI
+           END-IF
+           .
+       23200-TRAIT-FIN.
+      *---------------*
+           MOVE 'FIN DE LA TRANSACTION' TO MESSAGE-TXT
+           PERFORM   99000-FIN-CICS.
+
+      *
+       42000-VARIABLES-SORTIE.
+           MOVE E-NUMERO TO NUMO
+           MOVE  E-NOM TO  NOMO
+           MOVE  E-PRENOM TO PRENOMO
+           MOVE  E-ADR1 TO ADR1O
+           MOVE  E-ADR2 TO ADR2O
+           MOVE  E-CODEP  TO CPO
+           MOVE  E-VILLE TO VILLEO
+           MOVE  E-TELDOM TO  TELDOMO
+           MOVE  E-TELPOR TO  TELMOBO
+           MOVE  E-DATE-NAISS TO  DNAISSO.
+       90000-ERR-TOUCHE.
+      *----------------*
+           MOVE 'TOUCHE DE FONCTION INVALIDE' TO MESSO
+           PERFORM  22000-TRAIT-ENVOI.
+
+
+       91000-ERREUR-CICS.
+      *-------------------*
+           MOVE 'ERREUR CICS !!!  FIN DE LA TRANSACTION' TO MESSAGE-TXT
+           PERFORM   99000-FIN-CICS.
+
+       99000-FIN-CICS.
+      *--------------*
+           EXEC CICS SEND FROM   (MESSAGE-TXT)
+                          LENGTH (LENGTH OF MESSAGE-TXT)
+                          ERASE
+           END-EXEC
+
+           EXEC CICS RETURN END-EXEC
+           .

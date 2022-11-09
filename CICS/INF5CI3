@@ -1,0 +1,395 @@
+      *======================================================*
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. INF5C3.
+       AUTHOR. AF.
+      *======================================================*
+      *   E N V I R O N M E N T       D I V I S I O N        *
+      *======================================================*
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-390.
+       OBJECT-COMPUTER. IBM-390.
+
+      *======================================================*
+      *           D A T A         D I V I S I O N            *
+      *======================================================*
+       DATA DIVISION.
+
+       WORKING-STORAGE SECTION.
+
+      *------------------------------------------------------*
+      *   DESCRIPTION DETAILLEE DE LA ZONE DE COMMUNICATION  *
+      *------------------------------------------------------*
+       01  WS-COMMAREA.
+           05 PROG-PRECEDENT      PIC X(8).
+           05 PROG-COURANT        PIC X(8).
+           05 PROG-SUIVANT        PIC X(8).
+           05 FLAG                PIC 9.
+           05 NUM-PAGE            PIC S9(4) COMP.
+           05 F                   PIC X(174).
+
+       01 C-R                     PIC S9(8) COMP.
+       01 TRAN                    PIC S9(8) COMP.
+
+       01 TS-TIME                 PIC S9(15) COMP-3.
+       01 TS-DAY                  PIC S9(8) COMP.
+
+       01 MON-PROG                PIC X(8) VALUE 'INF5CI3'.
+       01 MA-MAP                  PIC X(8) VALUE 'MAP5CI3'.
+       01 MA-TRX                  PIC X(4) VALUE 'T5C3'.
+
+      *
+       01 TEL-FIXE.
+             04 INDIC-F     PIC 99.
+                88 INDIC-F-OK  VALUE 01 THRU 05.
+             04               PIC 9(8).
+       01 TEL-PORT.
+          04 INDIC-P     PIC 99.
+             88 INDIC-P-OK  VALUE 06.
+          04               PIC 9(8).
+       01 DATE-NAISS.
+          05 JOUR              PIC 9(2).
+            88 JOUR-OK         VALUE 01 THRU 31.
+             05 MOIS              PIC 9(2).
+               88 MOIS-OK         VALUE 01 THRU 12.
+             05 ANNEE             PIC 9(4).
+               88 ANNEE-OK        VALUE 1950 THRU 2006.
+      *ZONE D(AFFICHAGE
+       01 W-LINE.
+         02 L-NUM                 PIC 9(4).
+         02                       PIC X(5).
+         02 L-NOM                 PIC X(20).
+         02                       PIC X(5).
+         02 L-PRENOM              PIC X(20).
+         02                       PIC X(5).
+         02 L-DNAISS              PIC 9(8).
+         02                       PIC 9(2).
+         02 L-TEL                 PIC 9(10).
+
+       01 I                       PIC 99.
+      *------------------------------------------------------*
+      *   DESCRIPTION   DE   LA   MAP                        *
+      *------------------------------------------------------*
+       COPY MAP5CI3.
+
+      *------------------------------------------------------*
+      *   ZONE DE MESSAGE TAMPON POUR LE SEND FROM           *
+      *------------------------------------------------------*
+       01  MESSAGE-TXT            PIC X(79).
+
+      *------------------------------------------------------*
+      *   DESCRIPTION   DES  TOUCHES   FONCTIONS             *
+      *------------------------------------------------------*
+       COPY DFHAID.
+
+      *------------------------------------------------------*
+      *   DESCRIPTION   DES  ATTRIBUTS                       *
+      *------------------------------------------------------*
+       COPY DFHBMSCA.
+      *------------------------------------------------------*
+      *   COPIE DES ATTRIBUTS DE FSTAG POUR LE WRITE        *
+      *------------------------------------------------------*
+
+        COPY FSTAG.
+      *======================================================*
+      *          L I N K A G E     S E C T I O N             *
+      *======================================================*
+
+       LINKAGE SECTION.
+       01  DFHCOMMAREA.
+           05 LK-COMMAREA            PIC X(201).
+
+      *======================================================*
+      *     P R O C E D U R E     D I V I S I O N            *
+      *======================================================*
+
+       PROCEDURE DIVISION.
+       00000-INIT-PROGRAMME.
+      *---------------------*
+            PERFORM  10000-DEBUT-PROGRAMME
+            PERFORM  20000-TRAIT-PROGRAMME
+            GOBACK.
+
+
+       10000-DEBUT-PROGRAMME.
+      *---------------------*
+      *   TEST DE PREMIERE ENTREE DANS LE PROGRAMME
+      *   SI NON PROGRAMME  MENU ===>  ARRET  (ACCES INTERDIT)
+           IF EIBCALEN = 0
+              INITIALIZE      WS-COMMAREA
+           ELSE
+              MOVE LK-COMMAREA  TO WS-COMMAREA
+           END-IF
+
+           MOVE  PROG-COURANT     TO  PROG-PRECEDENT
+           MOVE  'INF5CI3'        TO  PROG-COURANT
+           .
+
+       20000-TRAIT-PROGRAMME.
+      *---------------------*
+
+           IF PROG-PRECEDENT  NOT =  PROG-COURANT
+              PERFORM  21000-TRAIT-CHARGEMENT
+              PERFORM  22000-TRAIT-ENVOI
+           ELSE
+              PERFORM  23000-TRAIT-RECEPTION
+           END-IF
+           .
+      *********************************************************
+
+       21000-TRAIT-CHARGEMENT.
+      *----------------------*
+      *  CHARGEMENT DE LA MAP AVANT AFFICHAGE
+           MOVE LOW-VALUE TO MAP5O
+      *  SI TRAITEMENT PARTICULIER AVANT AFFICHAGE
+           PERFORM  21100-TRAIT-SPECIFIQUE
+      *  INITIALISATION DU FLAG
+           MOVE 1 TO FLAG
+           MOVE 1 TO NUM-PAGE
+           .
+       21100-TRAIT-SPECIFIQUE.
+      *----------------------*
+            STRING EIBTRNID '/'
+            EIBTRMID '/MAP5CI3'
+            DELIMITED BY SIZE
+            INTO PROGO
+
+
+           EXEC CICS ASKTIME
+                ABSTIME(TS-TIME)
+           END-EXEC
+           EXEC CICS FORMATTIME
+                ABSTIME(TS-TIME)
+                DDMMYYYY(DATEO)
+                DATESEP('/')
+                TIME(TIMEO)
+                TIMESEP(':')
+                DAYOFWEEK(TS-DAY)
+           END-EXEC
+           EVALUATE TS-DAY
+           WHEN 0 MOVE 'DIMANCHE' TO DAYO
+           WHEN 1 MOVE 'LUNDI' TO DAYO
+           WHEN 2 MOVE 'MARDI' TO DAYO
+           WHEN 3 MOVE 'MERCREDI' TO DAYO
+           WHEN 4 MOVE 'JEUDI' TO DAYO
+           WHEN 5 MOVE 'VENDREDI' TO DAYO
+           WHEN 6 MOVE 'SAMEDI' TO DAYO
+           END-EVALUATE
+           MOVE NUM-PAGE TO PAGEO
+      *
+                .
+
+       22000-TRAIT-ENVOI.
+           PERFORM  21100-TRAIT-SPECIFIQUE
+      *-----------------*
+           EXEC CICS SEND MAP    ('MAP5')
+                          MAPSET('MAP5CI3')
+                          ERASE
+           END-EXEC
+
+           MOVE PROG-COURANT TO PROG-SUIVANT
+           EXEC CICS RETURN TRANSID  ('T5C3')
+                            COMMAREA (WS-COMMAREA)
+                            LENGTH   (LENGTH OF WS-COMMAREA)
+           END-EXEC
+           .
+
+       23000-TRAIT-RECEPTION.
+      *---------------------*
+
+           EVALUATE EIBAID
+              WHEN DFHENTER
+                   MOVE NUM-PAGE TO PAGEO
+               IF FLAG = 2
+                    MOVE 'VOUS ETES SURLA DERNIERE PAGE' TO MESSO
+                    PERFORM 22000-TRAIT-ENVOI
+               END-IF
+                   ADD 1 TO NUM-PAGE
+                   PERFORM  23100-TRAIT-ENTER
+              WHEN DFHPF8
+                   PERFORM  62100-TRAIT-F8
+              WHEN DFHPF10
+                   MOVE 'INF1CI3' TO PROG-SUIVANT
+                   PERFORM  23110-PROG-SUIVANT
+              WHEN DFHPF7
+                   PERFORM 62200-TRAIT-F7
+              WHEN DFHCLEAR
+              WHEN DFHPF12
+                   PERFORM  23200-TRAIT-FIN
+              WHEN DFHPF3
+                   PERFORM 63000-TRAIT-DELETEQ
+                   MOVE 'INF0CI3' TO PROG-SUIVANT
+                   PERFORM  23110-PROG-SUIVANT
+              WHEN OTHER
+                   PERFORM  90000-ERR-TOUCHE
+           END-EVALUATE
+           .
+
+       23100-TRAIT-ENTER.
+      *------------------*
+           EXEC CICS RECEIVE MAP  ('MAP5')
+                             MAPSET('MAP5CI3')
+                             RESP (C-R)
+           END-EXEC
+
+              EVALUATE C-R
+                WHEN DFHRESP(NORMAL)
+                     CONTINUE
+                WHEN DFHRESP(MAPFAIL)
+                     MOVE 'CHARGEMENT IMPOSSIBLE DE LA MAP' TO MESSO
+                WHEN OTHER
+                     PERFORM 91000-ERREUR-CICS
+              END-EVALUATE
+                    PERFORM 23300-TRAIT-BROWSING
+
+                  .
+        23300-TRAIT-BROWSING.
+           EXEC CICS STARTBR
+              FILE('FSTAG03')
+              RIDFLD (NUMI)
+              RESP(C-R)
+           END-EXEC
+           EVALUATE C-R
+                 WHEN DFHRESP(NORMAL)
+                      MOVE 'ENGT TROUVE ' TO MESSO
+                      CONTINUE
+                 WHEN DFHRESP(NOTFND)
+                      MOVE 'ENGT INEXISTANT' TO MESSO
+                      PERFORM 22000-TRAIT-ENVOI
+                 WHEN OTHER
+                      PERFORM 91000-ERREUR-CICS
+           END-EVALUATE
+                    PERFORM 23400-TRAIT-NORMAL
+                    .
+       23400-TRAIT-NORMAL.
+            PERFORM VARYING I FROM 1 BY 1 UNTIL I > 10
+                                    OR C-R = DFHRESP(ENDFILE)
+               PERFORM 23450-TRAIT-READNEXT
+
+            EVALUATE C-R
+                WHEN DFHRESP(NORMAL)
+                   PERFORM 43000-VARIABLES-LINE
+                    MOVE 1 TO FLAG
+                   MOVE W-LINE TO LIGNEO (I)
+                WHEN DFHRESP(ENDFILE)
+                    MOVE 2 TO FLAG
+                    PERFORM 23700-TRAIT-ENDFILE
+                WHEN OTHER
+                    PERFORM 91000-ERREUR-CICS
+            END-EVALUATE
+                END-PERFORM
+                    PERFORM 61000-TRAIT-WRITEQ
+                    PERFORM 22000-TRAIT-ENVOI
+                      .
+
+        23700-TRAIT-ENDFILE.
+                     PERFORM VARYING I FROM I BY 1 UNTIL I > 10
+                        MOVE SPACE TO LIGNEO (I)
+                     END-PERFORM
+                    .
+        23450-TRAIT-READNEXT.
+               EXEC CICS READNEXT
+                  FILE('FSTAG03')
+                  RIDFLD (NUMI)
+                  INTO (E-STAGIAIRE)
+                  RESP(C-R)
+               END-EXEC.
+       23110-PROG-SUIVANT.
+      *------------------*
+
+           EXEC CICS XCTL  PROGRAM  (PROG-SUIVANT)
+                           COMMAREA (WS-COMMAREA)
+                           LENGTH   (LENGTH OF WS-COMMAREA)
+                           RESP(C-R)
+           END-EXEC
+           IF C-R = DFHRESP(PGMIDERR)
+            MOVE 'PROGRAMME EN COURS DE DEVELOPPEMENT' TO MESSO
+            PERFORM 22000-TRAIT-ENVOI
+           END-IF
+           .
+       23200-TRAIT-FIN.
+      *---------------*
+           MOVE 'FIN DE LA TRANSACTION' TO MESSAGE-TXT
+           PERFORM   99000-FIN-CICS.
+
+
+      *
+       43000-VARIABLES-LINE.
+           MOVE E-NUMERO TO L-NUM
+           MOVE  E-NOM TO L-NOM
+           MOVE  E-PRENOM TO L-PRENOM
+           MOVE  E-TELDOM TO L-TEL
+           MOVE  E-DATE-NAISS TO L-DNAISS.
+       61000-TRAIT-WRITEQ.
+               EXEC CICS WRITEQ TS
+                   QUEUE ('STOKAGE')
+                   FROM (MAP5O)
+               END-EXEC
+             .
+       62100-TRAIT-F8.
+               IF FLAG = 2
+                    MOVE 'VOUS ETES SURLA DERNIERE PAGE' TO MESSO
+                    PERFORM 22000-TRAIT-ENVOI
+               END-IF
+
+             ADD 1 TO NUM-PAGE
+             MOVE NUM-PAGE TO PAGEO
+             PERFORM 62000-TRAIT-READQ
+              EVALUATE TRAN
+                 WHEN DFHRESP(NORMAL)
+                   PERFORM 22000-TRAIT-ENVOI
+                 WHEN DFHRESP(QIDERR)
+                 WHEN DFHRESP(ITEMERR)
+                   PERFORM 23100-TRAIT-ENTER
+              END-EVALUATE
+                   .
+       62200-TRAIT-F7.
+             IF NUM-PAGE = 1
+                  MOVE 'VOUS ETES SUR LA PREMIERE PAGE' TO MESSO
+                  PERFORM 22000-TRAIT-ENVOI
+                  MOVE 1 TO FLAG
+             END-IF
+
+              SUBTRACT 1 FROM NUM-PAGE
+              MOVE NUM-PAGE TO PAGEO
+              PERFORM 62000-TRAIT-READQ
+              EVALUATE TRAN
+                 WHEN DFHRESP(NORMAL)
+                    PERFORM 22000-TRAIT-ENVOI
+                 WHEN DFHRESP(ITEMERR)
+                   MOVE 'VOUS ETES SUR LA 1ERE PAGE' TO MESSO
+                 WHEN DFHRESP(QIDERR)
+                   PERFORM 23100-TRAIT-ENTER
+              END-EVALUATE
+                   .
+       62000-TRAIT-READQ.
+               EXEC CICS READQ TS
+                   QUEUE ('STOKAGE')
+                   ITEM(NUM-PAGE)
+                   INTO (MAP5O)
+                   RESP (TRAN)
+               END-EXEC.
+       63000-TRAIT-DELETEQ.
+               EXEC CICS  DELETEQ
+                 TS QUEUE('STOKAGE')
+               END-EXEC.
+       90000-ERR-TOUCHE.
+      *----------------*
+           MOVE 'TOUCHE DE FONCTION INVALIDE' TO MESSO
+           PERFORM  22000-TRAIT-ENVOI.
+
+
+       91000-ERREUR-CICS.
+      *-------------------*
+           MOVE 'ERREUR CICS !!!  FIN DE LA TRANSACTION' TO MESSAGE-TXT
+           PERFORM   99000-FIN-CICS.
+
+       99000-FIN-CICS.
+      *--------------*
+           EXEC CICS SEND FROM   (MESSAGE-TXT)
+                          LENGTH (LENGTH OF MESSAGE-TXT)
+                          ERASE
+           END-EXEC
+
+           EXEC CICS RETURN END-EXEC
+           .

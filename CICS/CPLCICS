@@ -1,0 +1,10 @@
+//API3C   JOB ((999,SDJ)),'',USER=API3,MSGLEVEL=(1,1),
+//         NOTIFY=&SYSUID,CLASS=A,MSGCLASS=H
+//         JCLLIB  ORDER=SDJ.FORM.PROCLIB
+//         EXEC COMPCICS,NOMPGM=INF0CI3
+//*=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-*
+//STEPCIC.SYSIN    DD DSN=API3.SOURCE.CICS(&NOMPGM),DISP=SHR
+//STEPCOB.SYSLIB   DD
+//                 DD
+//                 DD DSN=SDJ.CICS.COPY,DISP=SHR
+//
